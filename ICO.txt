@@ -1,0 +1,79 @@
+pragma solidity ^0.4.17;
+
+
+contract ERC20Interface{
+	function totalSupply() public constant returns (uint);
+	function balanceOf(address tokenOwner) public constant returns (uint balance);
+	function allowance(address tokenOwner, address spender) public constant returns (uint remaining);
+	function transfer(address to, uint tokens) public returns (bool success);
+	function approve(address spender, uint tokens) public returns (bool success);
+	function transferFrom(address from, address to, uint tokens) public returns (bool success);
+
+	event Transfer(address indexed from, address indexed to, uint tokens);
+	event Approval(address indexed tokenOwner, address indexed spender, uint tokens);
+}
+
+contract LANA_ICO{
+
+	address private owner;
+	address private LANA_Contract;
+	uint256 private _price;	//price of a LANA in Wei
+	bool private _priceSet;
+
+	function LANA_ICO(address _LANA) public{
+		owner = msg.sender;
+		LANA_Contract = _LANA;
+		_priceSet = false;
+	}
+
+	function setLANA_address(address _LANA) public{
+		require(msg.sender == owner);
+		LANA_Contract = _LANA;
+	}
+
+	function setPrice (uint256 _newPrice) public{
+		require(msg.sender == owner);
+		require(_newPrice > 0);
+		_price = _newPrice;
+		_priceSet = true;
+	}
+
+	function getPrice() public view returns (uint256 thePrice){
+		require(_priceSet == true);
+		return _price;
+	}
+
+	function () public payable{
+		if (msg.sender == owner){
+			return;
+		}else{
+			require(_priceSet);
+
+			//determine purchaced amount
+			uint tokensLeft = ERC20Interface(LANA_Contract).balanceOf(address(this));
+			uint tokensBought = (msg.value * 1 ether) / (_price) ;
+			if (tokensBought > tokensLeft)
+				tokensBought = tokensLeft;
+
+			//calculate purchace cost
+			uint totalCost = (tokensBought * _price) / (1 ether);
+			uint change = msg.value - totalCost;
+
+			//attempt transaction
+			bool success = ERC20Interface(LANA_Contract).transfer(msg.sender, tokensBought);
+			if(success == true){
+				owner.transfer(totalCost);
+				if(change > 0){
+					msg.sender.transfer(change);
+				}
+			}else{
+				revert();
+			}
+		}
+	}
+
+	function reclaimERC20(address tokenAddress, uint tokens) public returns (bool success){
+		require(msg.sender == owner);
+		return ERC20Interface(tokenAddress).transfer(owner, tokens);
+	}
+} 

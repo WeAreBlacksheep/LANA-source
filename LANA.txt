@@ -1,0 +1,102 @@
+pragma solidity ^0.4.17;
+
+
+contract ERC20Interface{
+	function totalSupply() public constant returns (uint);
+	function balanceOf(address tokenOwner) public constant returns (uint balance);
+	function allowance(address tokenOwner, address spender) public constant returns (uint remaining);
+	function transfer(address to, uint tokens) public returns (bool success);
+	function approve(address spender, uint tokens) public returns (bool success);
+	function transferFrom(address from, address to, uint tokens) public returns (bool success);
+
+	event Transfer(address indexed from, address indexed to, uint tokens);
+	event Approval(address indexed tokenOwner, address indexed spender, uint tokens);
+}
+
+contract LANA is ERC20Interface{
+
+	address private owner;
+	string private _symbol;
+	string private _name;
+	uint8 private _decimals;
+	uint256 private _totalSupply;
+
+	mapping(address => uint) balances;
+	mapping(address => mapping(address => uint)) approved;
+
+	function LANA() public{
+		_symbol = "LANA";
+		_name = "LANA token";
+		_decimals = 18;
+		_totalSupply = 100000000000000000000000000;
+		owner = msg.sender;
+
+		balances[owner] = _totalSupply;
+		Transfer(address(0), owner, _totalSupply);
+	}
+
+	function name() public view returns (string theName){
+		return _name;
+	}
+
+	function symbol() public view returns (string theSymbol){
+		return _symbol;
+	}
+
+	function decimals() public view returns (uint8 theDecimals){
+		return _decimals;
+	}
+
+	function totalSupply() public view returns (uint256 theTotalSupply){
+		return _totalSupply;
+	}
+
+	function balanceOf(address _owner) public view returns (uint256 balance){
+		return balances[_owner];
+	}
+
+	function transfer(address _to, uint256 _value) public returns (bool success){
+		require( _value >= 0);
+		require( balances[msg.sender] >= _value);
+
+		balances[msg.sender] -= _value;
+		balances[_to] += _value;
+
+		Transfer(msg.sender, _to, _value);
+		return true;
+	}
+
+	function transferFrom(address _from, address _to, uint256 _value) public returns (bool success){
+		require( _value >=0);
+		require( approved[_from][msg.sender] >= _value);
+		require( balances[_from] >= _value);
+
+		approved[_from][msg.sender] -= _value;
+		balances[_from] -= _value;
+		balances[_to] += _value;
+
+		Transfer(_from, _to, _value);
+		return true;
+	}
+
+	function approve (address _spender, uint256 _value) public returns (bool success){
+		approved[msg.sender][_spender] = _value;
+		Approval(msg.sender, _spender, _value);
+		return true;
+	}
+
+	function allowance(address _owner, address _spender) public view returns (uint256 remaining){
+		return approved[_owner][_spender];
+	}
+
+	function () public payable {
+		//do not accept ETH transactions
+		revert();
+	}
+
+	function reclaimERC20(address tokenAddress, uint tokens) public returns (bool success){
+		require(msg.sender == owner);
+		return ERC20Interface(tokenAddress).transfer(owner, tokens);
+	}
+
+}  
